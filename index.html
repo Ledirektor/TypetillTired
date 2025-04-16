@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viết tới Chết</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="overlay"></div>
+
+  <div id="controls">
+    <label for="blur-toggle">Ẩn chữ:</label>
+    <input type="checkbox" id="blur-toggle">
+
+    <label for="session-time">Thời gian phiên viết:</label>
+    <select id="session-time">
+      <option value="30">30 giây</option>
+      <option value="120">2 phút</option>
+      <option value="300" selected>5 phút</option>
+    </select>
+
+    <button id="start-button">Bắt đầu</button>
+  </div>
+
+  <textarea id="editor" autofocus disabled></textarea>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
