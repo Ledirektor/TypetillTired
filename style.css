@@ -4,6 +4,7 @@ body, html {
   height: 100%;
   background: #111;
   font-family: sans-serif;
+  overflow: auto;
 }
 
 #editor {
@@ -20,6 +21,8 @@ body, html {
   position: relative;
   transition: filter 0.3s;
   filter: blur(0px);
+  overflow: auto;
+  box-sizing: border-box;
 }
 
 #overlay {
