@@ -4,53 +4,78 @@ const blurToggle = document.getElementById('blur-toggle');
 const sessionTimeSelect = document.getElementById('session-time');
 const startButton = document.getElementById('start-button');
 
-let timeout;
-let redOverlayIntervals = [];
-let sessionDuration = 0;
-let sessionEnded = false;
-let sessionTimer;
+let timeout; // Timer cho 5 giây inactivity
+let redOverlayIntervals = []; // Timer cho hiệu ứng đỏ dần
+let sessionTimer; // Timer cho tổng thời gian phiên (chỉ dùng cho chế độ có giờ)
+
+let sessionEnded = true; // Mặc định là đã kết thúc (chưa bắt đầu)
+let sessionDuration = 0; // Thời gian tổng của phiên (chỉ dùng cho chế độ có giờ)
+
 
 function resetTimer() {
+  // Luôn xóa các timer cũ trước khi đặt lại
   clearTimeout(timeout);
   redOverlayIntervals.forEach(clearTimeout);
   redOverlayIntervals = [];
 
-  if (!sessionEnded) {
-    overlay.style.background = 'rgba(255, 255, 255, 0.03)';
-    // Red overlay gradient effect
+  const selectedMode = sessionTimeSelect.value; // Kiểm tra mode hiện tại
+
+  // Chỉ thực hiện logic đếm ngược 5s và hiệu ứng đỏ nếu KHÔNG ở chế độ free VÀ phiên chưa kết thúc
+  if (selectedMode !== "free" && !sessionEnded) {
+    overlay.style.background = 'rgba(255, 255, 255, 0.03)'; // Reset nền ngay
+
+    // Hiệu ứng đỏ dần
     for (let i = 1; i <= 5; i++) {
       const intensity = i * 0.2;
       const timeoutId = setTimeout(() => {
-        overlay.style.background = `rgba(255, 0, 0, ${intensity})`;
+        // Kiểm tra lại trạng thái trước khi đổi màu (phòng trường hợp mode/session thay đổi)
+        if (sessionTimeSelect.value !== "free" && !sessionEnded) {
+             overlay.style.background = `rgba(255, 0, 0, ${intensity})`;
+        }
       }, i * 1000);
       redOverlayIntervals.push(timeoutId);
     }
 
-    // Timeout để xóa text nếu dừng quá 5 giây
+    // Đặt lại bộ đếm 5 giây inactivity (chỉ khi không phải free mode)
     timeout = setTimeout(() => {
-      editor.value = '';
-      alert("Bạn đã ngưng viết quá lâu!");
-      // Có thể thêm logic để kết thúc phiên tại đây nếu muốn
-      // sessionEnded = true; // Ví dụ
-      // clearTimeout(sessionTimer); // Ví dụ
+       // Kiểm tra lại trạng thái trước khi xóa text
+       if (sessionTimeSelect.value !== "free" && !sessionEnded) {
+            editor.value = '';
+            alert("Bạn đã ngưng viết quá lâu!");
+            // Có thể cân nhắc kết thúc phiên luôn ở đây nếu muốn
+            // sessionEnded = true;
+            // clearTimeout(sessionTimer);
+       }
     }, 5000); // 5 giây chờ
+  } else {
+     // Nếu là free mode hoặc phiên đã kết thúc, đảm bảo overlay được reset
+     overlay.style.background = 'rgba(255, 255, 255, 0.03)';
   }
 }
 
+// Listener khi người dùng gõ chữ
 editor.addEventListener('input', () => {
-  if (!sessionEnded) {
+  // Chỉ reset bộ đếm 5s nếu KHÔNG ở chế độ free VÀ phiên chưa kết thúc
+  if (sessionTimeSelect.value !== "free" && !sessionEnded) {
     resetTimer();
   }
 });
 
+// Listener khi nhấn nút Bắt đầu
 startButton.addEventListener('click', () => {
-  sessionEnded = false;
-  sessionDuration = parseInt(sessionTimeSelect.value) * 1000;
+  const selectedMode = sessionTimeSelect.value; // Lấy giá trị mode được chọn
+  sessionEnded = false; // Đặt lại cờ, bắt đầu phiên mới
 
+  // Xóa tất cả các timer có thể còn sót lại từ phiên trước
+  clearTimeout(sessionTimer);
+  clearTimeout(timeout);
+  redOverlayIntervals.forEach(clearTimeout);
+  redOverlayIntervals = [];
+  overlay.style.background = 'rgba(255, 255, 255, 0.03)'; // Reset overlay ngay
+
+  // Kích hoạt ô editor và xóa nội dung cũ
   editor.disabled = false;
   editor.focus();
-
-  // Xóa nội dung cũ khi bắt đầu phiên mới
   editor.value = '';
 
   // Áp dụng hiệu ứng blur nếu được chọn
@@ -60,37 +85,42 @@ startButton.addEventListener('click', () => {
     editor.style.filter = 'none';
   }
 
-  // Bắt đầu bộ đếm thời gian chờ 5s
-  resetTimer();
+  // Xử lý tùy theo mode được chọn
+  if (selectedMode === "free") {
+    // CHẾ ĐỘ TỰ DO: Không làm gì liên quan đến timer
+    console.log("Chế độ Tự do bắt đầu.");
+    // Không gọi resetTimer() ở đây vì không cần bộ đếm 5s
+    // Không đặt sessionTimer
 
-  // Bắt đầu bộ đếm thời gian của phiên viết
-  clearTimeout(sessionTimer);
-  sessionTimer = setTimeout(() => {
-    sessionEnded = true; // Đánh dấu phiên đã kết thúc
-    clearTimeout(timeout); // Dừng bộ đếm 5s inactivity
-    redOverlayIntervals.forEach(clearTimeout); // Dừng hiệu ứng đỏ
-    overlay.style.background = 'rgba(255, 255, 255, 0.03)'; // Reset màu nền
+  } else {
+    // CHẾ ĐỘ CÓ HẸN GIỜ
+    console.log("Chế độ hẹn giờ bắt đầu.");
+    sessionDuration = parseInt(selectedMode) * 1000;
 
-    // === PHẦN ĐƯỢC THÊM/SỬA ===
-    // Chọn (bôi đen) toàn bộ văn bản trong editor
-    editor.select();
-    editor.setSelectionRange(0, 99999); // Đảm bảo hoạt động tốt trên nhiều trình duyệt/mobile
+    // Bắt đầu chu trình đếm 5 giây inactivity
+    resetTimer();
 
-    // Hiển thị thông báo cho người dùng biết văn bản đã được chọn
-    alert("Phiên viết đã kết thúc. Văn bản đã được chọn sẵn. Hãy sao chép (copy) ngay!");
-    // === KẾT THÚC PHẦN THÊM/SỬA ===
+    // Đặt bộ đếm tổng thời gian cho phiên viết
+    sessionTimer = setTimeout(() => {
+      sessionEnded = true; // Đánh dấu phiên đã kết thúc
+      clearTimeout(timeout); // Dừng bộ đếm 5s inactivity
+      redOverlayIntervals.forEach(clearTimeout); // Dừng hiệu ứng đỏ
+      overlay.style.background = 'rgba(255, 255, 255, 0.03)'; // Reset màu nền
 
-    // Tùy chọn: giữ focus vào editor sau khi alert tắt
-    // editor.focus();
+      // Chọn văn bản và thông báo
+      editor.select();
+      editor.setSelectionRange(0, 99999);
+      alert("Phiên viết đã kết thúc. Văn bản đã được chọn sẵn. Hãy sao chép (copy) ngay!");
 
-  }, sessionDuration); // Thời gian của phiên viết (vd: 5 phút)
-});
+      // Tùy chọn: giữ focus vào editor sau khi alert tắt
+      // editor.focus();
 
-blurToggle.addEventListener('change', () => {
-  // Chỉ thay đổi filter nếu phiên chưa kết thúc HOẶC editor đang không bị disable
-  // (Để tránh việc đang blur mà disable thì không bỏ blur được)
-  if (!sessionEnded || !editor.disabled) {
-      editor.style.filter = blurToggle.checked ? 'blur(8px)' : 'none';
+    }, sessionDuration);
   }
 });
 
+// Listener khi thay đổi checkbox blur
+blurToggle.addEventListener('change', () => {
+  // Luôn cho phép thay đổi blur bất kể trạng thái nào
+  editor.style.filter = blurToggle.checked ? 'blur(8px)' : 'none';
+});
